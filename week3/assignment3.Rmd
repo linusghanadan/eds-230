@@ -1,0 +1,70 @@
+---
+title: "assignment3"
+output: html_document
+date: "2024-04-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r}
+# load packages
+library(tidyverse)
+```
+
+```{r}
+# source function from R script
+source(here::here("week3/assignment3.R"))
+```
+
+```{r}
+# range of hourly wages to test
+hourly_wages <- seq(30, 45, by = 1) # impact of up to 50% increase in hourly wage
+
+# vector for storing results
+profits <- numeric(length(hourly_wages))
+
+# loop through each hourly wage to calculate profits
+for (i in seq_along(hourly_wages)) {
+  profits[i] <- almond_profit(hourly_wage = hourly_wages[i])}
+
+# create df for plotting
+results_df <- tibble(hourly_wage = hourly_wages, profit = profits)
+
+# plot results
+ggplot(results_df, aes(x = hourly_wage, y = profit)) +
+  geom_line(color = "darkseagreen") +
+  theme_minimal() +
+  labs(title = "Sensitivity of almond farm profit to hourly wage",
+       x = "Hourly wage ($)",
+       y = "Profit ($)")
+
+```
+
+```{r}
+# range of prices to test
+prices <- seq(100, 110, by = 5) # impact of up to 10% increase in almond price per ton
+
+# vector for storing results
+profits <- numeric(length(prices))
+
+# loop through each price to calculate profits
+for (i in seq_along(prices)) {
+  profits[i] <- almond_profit(price = prices[i])
+}
+
+# create df for plotting
+results_df <- tibble(price_per_ton = prices, profit = profits)
+
+# plot results
+ggplot(results_df, aes(x = price_per_ton, y = profit)) +
+  geom_line(color = "cornflowerblue") +
+  theme_minimal() +
+  labs(title = "Sensitivity of almond farm profit to price per ton",
+       x = "Price per ton of almonds ($)",
+       y = "Profit ($)")
+
+```
+
+
