@@ -1,0 +1,87 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(sensitivity)
+library(tidyverse)
+library(purrr)
+library(ggpubr)
+```
+
+```{r}
+source("week4/nse.R")
+```
+
+```{r}
+# multiple results - lets say we've run the model for multiple years, each column
+# is streamflow for a different parameter set
+msage <- read.table("data/sagerm.txt", header = TRUE)
+
+# import sager df for date column
+sager <- read.table(here::here("data/sager.txt"), header=TRUE)
+sager <- sager %>% mutate(date = paste(day,month,year, sep="/"))
+sager$date <- as.Date(sager$date,"%d/%m/%Y")
+
+# Assuming 'sager' contains the observed data with date columns
+msage$date = sager$date
+msage$month = sager$month
+msage$year = sager$year
+msage$day = sager$day
+msage$wy = sager$wy
+
+# Transform data for analysis
+msagel <- msage %>%
+  pivot_longer(cols =!c(date, month, year, day, wy), names_to = "run", values_to = "flow")
+
+# Split the data
+pre_calibration <- subset(msage, year >= 1960 & year <= 1969)
+post_calibration <- subset(msage, year >= 1980 & year <= 1989)
+```
+
+```{r}
+# calculate NSE for each parameter set across the entire data set
+results <- msage %>%
+  pivot_longer(cols = starts_with("V"), names_to = "run", values_to = "flow") %>%
+  group_by(run) %>%
+  summarise(NSE = nse(flow, sager$obs))
+
+# extract best and worst runs
+best_run <- results$run[which.max(results$NSE)]
+worst_run <- results$run[which.min(results$NSE)]
+
+paste("Best run:", best_run)
+paste("Worst run:", worst_run)
+
+```
+
+```{r}
+# Graph daily streamflow for the best parameter set
+msage %>%
+  mutate(date = as.Date(date)) %>%
+  ggplot(aes(x = date, y = !!sym(best_run))) +  # Use sym() to convert string to symbol
+  geom_line() +
+  labs(title = paste("Daily Streamflow for", best_run), x = "Date", y = "Flow")
+
+```
+
+```{r}
+# Compute NSE for pre and post calibration for the best run
+pre_nse <- nse(pre_calibration[[best_run]], sager$obs)
+post_nse <- nse(post_calibration[[best_run]], sager$obs)
+
+# Prepare data for plotting
+nse_data <- data.frame(
+  Calibration = c("Pre", "Post"),
+  NSE = c(pre_nse, post_nse)
+)
+
+# Plot the changes in NSE from pre to post calibration
+ggplot(nse_data, aes(x = Calibration, y = NSE, fill = Calibration)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = sprintf("%.2f", NSE)), vjust = -0.5) +
+  labs(title = "Model Performance Change (NSE): Pre vs Post Calibration",
+       x = "Calibration Period",
+       y = "Nash-Sutcliffe Efficiency (NSE)") +
+  theme_minimal()
+
+```
+
